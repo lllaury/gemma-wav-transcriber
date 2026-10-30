@@ -13,13 +13,13 @@ Point it at a folder of recordings of any length and it writes a transcript next
 ## Requirements
 
 1. **Ollama** – install from <https://ollama.com/download> and make sure it is running (`ollama serve`, or the desktop app).
-2. **An audio-capable Gemma model** – the default is `gemma4:e4b`. The tool downloads it automatically on first run, or you can do it yourself:
+2. **An audio-capable Gemma model** – the default is `gemma4:e2b`. The tool downloads it automatically on first run, or you can do it yourself:
 
    ```sh
-   ollama pull gemma4:e4b
+   ollama pull gemma4:e2b
    ```
 
-   Only the Gemma 4 **E2B** and **E4B** models understand audio. `gemma4:e4b` is the default for better accuracy; use `--model gemma4:e2b` on machines with less memory.
+   Only the Gemma 4 **E2B** and **E4B** models understand audio. `gemma4:e2b` is the default because it is fast enough to run on a CPU (for example inside a virtual machine); use `--model gemma4:e4b` for somewhat better accuracy if you have a GPU or plenty of time.
 3. **Python 3.15** (3.12 or newer also works) – only needed if you run from source rather than a prebuilt executable.
 
 ## Install
@@ -55,14 +55,14 @@ gemma-transcribe interview.wav recordings/ -r -o transcripts/
 gemma-transcribe recordings/ -f srt
 gemma-transcribe recordings/ -t
 
-# Use the smaller model
-gemma-transcribe recordings/ -m gemma4:e2b
+# Use the larger, more accurate model
+gemma-transcribe recordings/ -m gemma4:e4b
 ```
 
 | Option | Description |
 | --- | --- |
 | `-o, --output-dir DIR` | Write transcripts to `DIR` instead of next to each `.wav` |
-| `-m, --model NAME` | Ollama model to use (default `gemma4:e4b`) |
+| `-m, --model NAME` | Ollama model to use (default `gemma4:e2b`) |
 | `-f, --format txt\|srt\|json` | Transcript format (default `txt`) |
 | `-t, --timestamps` | Prefix each chunk with `[hh:mm:ss]` in `txt` output |
 | `-r, --recursive` | Search folders recursively |

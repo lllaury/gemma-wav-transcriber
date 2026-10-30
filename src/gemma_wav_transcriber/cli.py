@@ -12,7 +12,7 @@ from . import __version__
 from .audio import TARGET_RATE, AudioError, Chunk, load_for_model, split_chunks, to_wav_bytes
 from .ollama_client import DEFAULT_HOST, DEFAULT_PROMPT, OllamaClient, OllamaError
 
-DEFAULT_MODEL = "gemma4:e4b"
+DEFAULT_MODEL = "gemma4:e2b"
 FORMATS = ("txt", "srt", "json")
 
 
