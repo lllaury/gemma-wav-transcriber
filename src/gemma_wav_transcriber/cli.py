@@ -99,7 +99,7 @@ def transcribe_file(
             f"[{_ts(chunk.start)[:8]}-{_ts(chunk.end)[:8]}] {time.monotonic() - t0:.1f}s"
         )
         if not args.no_phonetic:
-            text = to_letters(text)
+            text = to_letters(text, vocab.acronyms)
         if vocab and not args.no_correct:
             text = vocab.correct(text)
         results.append((chunk, text))

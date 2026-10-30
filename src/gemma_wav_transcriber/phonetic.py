@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable
 
 LETTERS = {
     "alpha": "A", "alfa": "A", "bravo": "B", "beta": "B", "charlie": "C", "delta": "D", "echo": "E",
@@ -30,7 +31,8 @@ def _alternation(words) -> str:
 
 
 _LETTER = rf"(?:{_alternation(LETTERS)})"
-_DIGIT = rf"(?:{_alternation(DIGITS)})"
+# The model often writes the numbers as numerals: "kilo 8 sierra".
+_DIGIT = rf"(?:{_alternation(DIGITS)}|[0-9])"
 _SEP = r"(?:\s*[,\-]\s*|\s+)"
 # At least two code words in a row; digits may only appear between them,
 # so "kilo eight sierra" is K8S but "one two three" is left alone.
@@ -44,12 +46,21 @@ def _key(word: str) -> str:
     return re.sub(r"[\s\-]+", " ", word.lower()).replace("x ray", "x-ray")
 
 
-def to_letters(text: str) -> str:
-    """Replace each run of two or more phonetic code words with its letters."""
+def to_letters(text: str, known: Iterable[str] = ()) -> str:
+    """Replace each run of two or more phonetic code words with its letters.
+
+    `known` acronyms help when the model drops a full stop: "hotel india papa
+    alpha alpha charlie flew" becomes "HIPAA charlie flew" if HIPAA is known.
+    """
+    known = set(known)
 
     def spell(match: re.Match[str]) -> str:
-        return "".join(
-            LETTERS.get(k) or DIGITS[k] for k in map(_key, _TOKEN.findall(match.group(0)))
-        )
+        words = _TOKEN.findall(match.group(0))
+        letters = [k if k.isdigit() else LETTERS.get(k) or DIGITS[k] for k in map(_key, words)]
+        spelled = "".join(letters)
+        head = "".join(letters[:-1])
+        if spelled not in known and head in known and len(letters) > 2 and words[-1][0].isalpha():
+            return f"{head} {words[-1]}"
+        return spelled
 
     return _RUN.sub(spell, text)
