@@ -23,6 +23,11 @@ ACRONYM_RULE = (
     "(for example FBI, NASA, API), even when they are spoken letter by letter."
 )
 
+PHONETIC_RULE = (
+    "When letters are spelled with the NATO phonetic alphabet (Alpha, Bravo, Charlie ...), "
+    "write the letters themselves, for example \"alpha bravo charlie\" as ABC."
+)
+
 # Common ISO 639-1 codes; anything else is passed to the model as written.
 LANGUAGES = {
     "ar": "Arabic", "bn": "Bengali", "ca": "Catalan", "cs": "Czech", "da": "Danish",
@@ -50,6 +55,7 @@ def build_prompt(
     translate_to: str | None = None,
     vocab: Vocabulary | None = None,
     acronyms: bool = True,
+    phonetic: bool = True,
 ) -> str:
     lang = language_name(language)
     target = language_name(translate_to)
@@ -62,6 +68,8 @@ def build_prompt(
         parts.append(f"The speech is in {lang}. Write the transcript in {lang}, in its usual script.")
     if acronyms:
         parts.append(ACRONYM_RULE)
+    if phonetic:
+        parts.append(PHONETIC_RULE)
     if vocab:
         parts.append("This recording may use specialised vocabulary. " + vocab.prompt_hint())
     return " ".join(parts)

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "gemma-wav-transcriber"
-version = "0.2.0"
+version = "0.3.0"
 description = "Batch-transcribe .wav files to text using a Gemma model running locally in Ollama."
 readme = "README.md"
 license = "MIT"

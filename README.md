@@ -11,6 +11,7 @@ Point it at a folder of recordings of any length and it writes a transcript next
 - Skips files that already have a transcript, so you can re-run it on a growing folder
 - Custom vocabulary files teach it your domain's terms, how they sound, and your acronyms
 - Writes acronyms in capitals, and fixes your listed acronyms even when spelled out, e.g. "f.b.i." becomes "FBI"
+- Understands the NATO phonetic alphabet: "alpha bravo charlie" becomes "ABC"
 - Transcribe in a chosen language, or translate the speech into another one
 
 ## Requirements
@@ -82,6 +83,7 @@ gemma-transcribe recordings/ -l es --translate-to en
 | `-l, --language LANG` | Language spoken in the audio, as a code (`es`) or name (`Spanish`). Default: auto-detect |
 | `--translate-to LANG` | Output a translation into `LANG` instead of a verbatim transcript |
 | `--no-acronym-rule` | Don't tell the model to write acronyms in capitals |
+| `--no-phonetic` | Don't turn NATO phonetic spelling into letters |
 | `--prompt TEXT` | Replace the base transcription instruction |
 | `--show-prompt` | Print the full instruction sent to the model |
 | `--retries N` | Retries per chunk if the server errors (default 2) |
@@ -121,6 +123,18 @@ letter or already in capitals, so "it" is never turned into "IT". Even without a
 write acronyms in capitals without periods; `--no-acronym-rule` turns that off.
 
 Keep "sounds like" phrases specific: a phrase that is also ordinary speech will be replaced everywhere it appears.
+
+## Phonetic alphabet
+
+Letters spelled with the NATO phonetic alphabet are turned into the letters themselves, so "Alpha Bravo Charlie"
+becomes `ABC` and "golf-hotel-india" becomes `GHI`. Number words between code words are kept as digits ("kilo eight
+sierra" becomes `K8S`), and both `Alfa`/`Alpha`, `Juliet`/`Juliett`, `Whiskey`/`Whisky` and `X-ray`/`Xray` are
+recognised. The model is told to do this too, and the transcript is corrected afterwards in case it doesn't.
+
+Only runs of two or more code words are converted, so a single "delta" or "Charlie" in normal speech is left alone, and
+number words on their own ("one two three") are never touched. Two code words in a row in ordinary speech, such as a
+name like "Mike Oscar", will also be converted; use `--no-phonetic` if your recordings have that kind of thing. Listed
+acronyms in your vocabulary file are still fixed after the conversion.
 
 ## Languages
 

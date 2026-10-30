@@ -11,6 +11,7 @@ from pathlib import Path
 from . import __version__
 from .audio import TARGET_RATE, AudioError, Chunk, load_for_model, split_chunks, to_wav_bytes
 from .ollama_client import DEFAULT_HOST, OllamaClient, OllamaError
+from .phonetic import to_letters
 from .prompt import DEFAULT_PROMPT, build_prompt, language_name
 from .vocab import Vocabulary, VocabError, load as load_vocab
 
@@ -97,6 +98,8 @@ def transcribe_file(
             f"    chunk {chunk.index + 1}/{len(chunks)} "
             f"[{_ts(chunk.start)[:8]}-{_ts(chunk.end)[:8]}] {time.monotonic() - t0:.1f}s"
         )
+        if not args.no_phonetic:
+            text = to_letters(text)
         if vocab and not args.no_correct:
             text = vocab.correct(text)
         results.append((chunk, text))
@@ -125,6 +128,8 @@ def build_parser() -> argparse.ArgumentParser:
                    help="only give the vocabulary to the model; do not post-correct the transcript")
     p.add_argument("--no-acronym-rule", action="store_true",
                    help="do not tell the model to write acronyms in capitals")
+    p.add_argument("--no-phonetic", action="store_true",
+                   help='do not turn NATO phonetic spelling ("alpha bravo charlie") into letters')
     p.add_argument("--prompt", default=DEFAULT_PROMPT, help="override the transcription instruction")
     p.add_argument("--show-prompt", action="store_true", help="print the full instruction sent to the model")
     p.add_argument("--retries", type=int, default=2, help="retries per chunk on server errors (default: 2)")
@@ -148,7 +153,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: {e}", file=sys.stderr)
         return 2
     prompt = build_prompt(
-        args.prompt, args.language, args.translate_to, vocab, acronyms=not args.no_acronym_rule
+        args.prompt, args.language, args.translate_to, vocab,
+        acronyms=not args.no_acronym_rule, phonetic=not args.no_phonetic,
     )
     if vocab:
         print(

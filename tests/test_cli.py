@@ -81,3 +81,17 @@ def test_bad_vocab_file(tmp_path, capsys):
     vocab.write_text("[wrong]\n", encoding="utf-8")
     assert cli.main([str(tmp_path), "--vocab", str(vocab)]) == 2
     assert "unknown section" in capsys.readouterr().err
+
+
+def test_phonetic_spelling(tmp_path, monkeypatch):
+    class Client(FakeClient):
+        def transcribe_wav(self, model, wav_bytes, prompt, num_ctx):
+            assert "NATO phonetic alphabet" in prompt
+            return "our code is hotel india papa alpha alpha"
+
+    monkeypatch.setattr(cli, "OllamaClient", Client)
+    vocab = tmp_path / "vocab.txt"
+    vocab.write_text("[acronyms]\nHIPAA\n", encoding="utf-8")
+    write_pcm16(tmp_path / "a.wav", tone(3.0, 16000), 16000)
+    assert cli.main([str(tmp_path / "a.wav"), "-v", str(vocab)]) == 0
+    assert (tmp_path / "a.txt").read_text().strip() == "our code is HIPAA"
