@@ -37,6 +37,11 @@ def test_parse_sections_and_pronunciations():
         ("covid-19 and hip ah rules", "COVID-19 and HIPAA rules"),
         # "it" is an everyday word: only spelled-out forms become IT
         ("Call it support, I T or i.t.", "Call it support, IT or IT."),
+        # full stops after acronyms are kept
+        ("Ask nasa. Next, the F.B.I. We go.", "Ask NASA. Next, the FBI. We go."),
+        ("the f.b.i. agents", "the FBI agents"),
+        # plain terms get their spelling back
+        ("we run kubernetes and c#", "we run Kubernetes and C#"),
         # letters split across a sentence break are left alone
         ("Plan F. B I", "Plan F. B I"),
     ],

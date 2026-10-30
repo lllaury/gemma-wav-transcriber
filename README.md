@@ -111,7 +111,8 @@ The vocabulary is used in two ways:
 1. **As context for the model.** The terms, acronyms and pronunciation guide are added to the instruction sent with every
    chunk, so the model knows which spellings to expect.
 2. **As post-correction.** After each chunk is transcribed, anything matching a "sounds like" phrase is replaced with its
-   written form (ignoring case, and treating spaces and hyphens alike). Acronyms are fixed to capitals, including
+   written form (ignoring case, and treating spaces and hyphens alike). Terms get their exact spelling back
+   (`kubernetes` becomes `Kubernetes`). Acronyms are fixed to capitals, including
    spelled-out forms such as `Nasa`, `n a s a` or `N.A.S.A.`. Use `--no-correct` to turn this off and rely on the
    model alone.
 

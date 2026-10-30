@@ -90,6 +90,11 @@ class Vocabulary:
             if words:
                 body = r"[\s\-]+".join(map(re.escape, words))
                 rules.append((re.compile(rf"(?<!\w){body}(?!\w)", re.IGNORECASE), written))
+        # Terms get their exact spelling back ("kubernetes" -> "Kubernetes"),
+        # unless they are everyday words that would be changed everywhere.
+        for term in self.terms:
+            if term.lower() not in COMMON_WORDS:
+                rules.append((re.compile(rf"(?<!\w){re.escape(term)}(?!\w)", re.IGNORECASE), term))
         for acro in self.acronyms:
             rules.append((_acronym_pattern(acro), acro))
         return rules
@@ -113,8 +118,14 @@ def _acronym_pattern(acro: str) -> re.Pattern[str]:
 
 
 def _keep_final_period(match: re.Match[str], written: str) -> str:
-    # "...at N.A.S.A." at the end of a chunk: the last dot also ends the sentence.
-    if match.group(0).endswith(".") and match.end() == len(match.string):
+    found = match.group(0)
+    if not found.endswith("."):
+        return written
+    if "." not in found[:-1]:
+        # "the API. Next": the dot was only ever a full stop.
+        return written + "."
+    # "N.A.S.A. We went" or "...at N.A.S.A." at the end: the last dot also ends the sentence.
+    if re.match(r"\s*$|\s+[A-Z]", match.string[match.end():]):
         return written + "."
     return written
 
