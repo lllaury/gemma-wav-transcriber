@@ -53,3 +53,31 @@ def test_bad_file_is_reported(tmp_path, monkeypatch):
     monkeypatch.setattr(cli, "OllamaClient", FakeClient)
     (tmp_path / "bad.wav").write_bytes(b"garbage")
     assert cli.main([str(tmp_path)]) == 1
+
+
+def test_vocab_language_and_correction(tmp_path, monkeypatch):
+    prompts = []
+
+    class Client(FakeClient):
+        def transcribe_wav(self, model, wav_bytes, prompt, num_ctx):
+            prompts.append(prompt)
+            return "we use cooper netties at n.a.s.a."
+
+    monkeypatch.setattr(cli, "OllamaClient", Client)
+    vocab = tmp_path / "vocab.txt"
+    vocab.write_text("cooper netties = Kubernetes\n[acronyms]\nNASA\n", encoding="utf-8")
+    write_pcm16(tmp_path / "a.wav", tone(3.0, 16000), 16000)
+
+    assert cli.main([str(tmp_path / "a.wav"), "--vocab", str(vocab), "-l", "en"]) == 0
+    assert (tmp_path / "a.txt").read_text().strip() == "we use Kubernetes at NASA."
+    assert "The speech is in English" in prompts[0] and "Kubernetes" in prompts[0]
+
+    assert cli.main([str(tmp_path / "a.wav"), "-v", str(vocab), "--no-correct", "--overwrite"]) == 0
+    assert (tmp_path / "a.txt").read_text().strip() == "we use cooper netties at n.a.s.a."
+
+
+def test_bad_vocab_file(tmp_path, capsys):
+    vocab = tmp_path / "vocab.txt"
+    vocab.write_text("[wrong]\n", encoding="utf-8")
+    assert cli.main([str(tmp_path), "--vocab", str(vocab)]) == 2
+    assert "unknown section" in capsys.readouterr().err

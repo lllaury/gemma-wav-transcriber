@@ -8,14 +8,9 @@ import urllib.error
 import urllib.request
 from collections.abc import Callable
 
-DEFAULT_HOST = "http://localhost:11434"
+from .prompt import DEFAULT_PROMPT
 
-DEFAULT_PROMPT = (
-    "Transcribe the speech in this audio clip verbatim. "
-    "Output only the spoken words as plain text, with punctuation. "
-    "Do not add commentary, labels, translations or descriptions. "
-    "If there is no intelligible speech, output nothing."
-)
+DEFAULT_HOST = "http://localhost:11434"
 
 
 class OllamaError(Exception):

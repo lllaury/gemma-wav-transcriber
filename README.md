@@ -9,6 +9,9 @@ Point it at a folder of recordings of any length and it writes a transcript next
 - Reads 8/16/24/32-bit PCM and 32/64-bit float WAV, mono or stereo, at any sample rate
 - Outputs plain text, timestamped text, SRT subtitles or JSON
 - Skips files that already have a transcript, so you can re-run it on a growing folder
+- Custom vocabulary files teach it your domain's terms, how they sound, and your acronyms
+- Writes acronyms in capitals, and fixes your listed acronyms even when spelled out, e.g. "f.b.i." becomes "FBI"
+- Transcribe in a chosen language, or translate the speech into another one
 
 ## Requirements
 
@@ -57,6 +60,11 @@ gemma-transcribe recordings/ -t
 
 # Use the larger, more accurate model
 gemma-transcribe recordings/ -m gemma4:e4b
+
+# Domain vocabulary, Spanish audio, and translation to English
+gemma-transcribe recordings/ --vocab medical.txt
+gemma-transcribe recordings/ -l es
+gemma-transcribe recordings/ -l es --translate-to en
 ```
 
 | Option | Description |
@@ -69,17 +77,65 @@ gemma-transcribe recordings/ -m gemma4:e4b
 | `--chunk-seconds N` | Target chunk length, 1–30 seconds (default 20) |
 | `--host URL` | Ollama server URL (default `http://localhost:11434`) |
 | `--num-ctx N` | Model context size (default 8192) |
-| `--prompt TEXT` | Replace the transcription instruction, e.g. to add names or jargon |
+| `-v, --vocab FILE` | Custom vocabulary file (see below). Can be given more than once |
+| `--no-correct` | Give the vocabulary to the model but don't post-correct the transcript |
+| `-l, --language LANG` | Language spoken in the audio, as a code (`es`) or name (`Spanish`). Default: auto-detect |
+| `--translate-to LANG` | Output a translation into `LANG` instead of a verbatim transcript |
+| `--no-acronym-rule` | Don't tell the model to write acronyms in capitals |
+| `--prompt TEXT` | Replace the base transcription instruction |
+| `--show-prompt` | Print the full instruction sent to the model |
 | `--retries N` | Retries per chunk if the server errors (default 2) |
 | `--overwrite` | Re-transcribe files that already have a transcript |
 | `--no-pull` | Fail instead of downloading a missing model |
+
+## Custom vocabulary
+
+Speech models often mishear specialist words: product names, jargon, people's names, acronyms. A vocabulary file
+lists them, along with how they sound if the model tends to get them wrong. It is plain UTF-8 text, one entry per line
+(see [`examples/vocabulary.txt`](examples/vocabulary.txt)):
+
+```ini
+# Lines starting with # are comments ("C#" is still a term).
+[terms]
+Kubernetes                      # spell this term exactly like this
+cooper netties = Kubernetes     # how it sounds = how to write it
+post gres, postgres = PostgreSQL  # several ways it may be heard
+
+[acronyms]
+API, GPU, NASA                  # always written in capitals
+hip ah, hippa = HIPAA           # an acronym said as a word
+```
+
+The vocabulary is used in two ways:
+
+1. **As context for the model.** The terms, acronyms and pronunciation guide are added to the instruction sent with every
+   chunk, so the model knows which spellings to expect.
+2. **As post-correction.** After each chunk is transcribed, anything matching a "sounds like" phrase is replaced with its
+   written form (ignoring case, and treating spaces and hyphens alike). Acronyms are fixed to capitals, including
+   spelled-out forms such as `Nasa`, `n a s a` or `N.A.S.A.`. Use `--no-correct` to turn this off and rely on the
+   model alone.
+
+Acronyms that are also everyday words (`IT`, `US`, `AM`, ...) are only corrected when they are spelled out letter by
+letter or already in capitals, so "it" is never turned into "IT". Even without a vocabulary file, the model is told to
+write acronyms in capitals without periods; `--no-acronym-rule` turns that off.
+
+Keep "sounds like" phrases specific: a phrase that is also ordinary speech will be replaced everywhere it appears.
+
+## Languages
+
+By default the model transcribes whatever language is spoken. If you know the language, `-l/--language` tells the
+model, which helps with accents, short clips and mixed-language recordings. It accepts a two-letter code (`en`, `es`,
+`fr`, `de`, `ja`, `zh`, ...) or a language name. `--translate-to` asks for a translation instead of a transcript, for
+example `-l es --translate-to en` turns Spanish speech into English text. Gemma 4 supports speech in many languages,
+but accuracy is best for widely spoken ones.
 
 ## How it works
 
 1. Each WAV is decoded, mixed down to mono and resampled to 16 kHz.
 2. The audio is split into chunks of about 20 seconds. Each cut is placed at the quietest moment in the last few seconds of the chunk, and silent chunks are skipped.
-3. Each chunk is sent to the model through Ollama's `/api/chat` endpoint as a base64 WAV, with an instruction to transcribe verbatim.
-4. The chunk transcripts are joined in order and written out.
+3. Each chunk is sent to the model through Ollama's `/api/chat` endpoint as a base64 WAV, with an instruction to transcribe
+   verbatim (plus the language and vocabulary, if given).
+4. Each chunk's text is post-corrected with the vocabulary, then the chunks are joined in order and written out.
 
 Ollama does not yet have a dedicated audio field in its API, so audio is passed through the `images` field, which
 current Ollama versions route to the Gemma 4 audio encoder. If your Ollama version replies with something like

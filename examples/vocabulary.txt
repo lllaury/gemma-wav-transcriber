@@ -1,0 +1,22 @@
+# Example vocabulary file for gemma-transcribe --vocab
+#
+# Lines starting with # are comments. Each line is one of:
+#   Term                        spell this term exactly like this
+#   how it sounds = Written     what you hear = how to write it
+#   sound one, sound two = Written   several ways it may be heard
+# "->" works as well as "=".
+
+[terms]
+Kubernetes
+PostgreSQL
+cooper netties, kuber nets = Kubernetes
+post gres, postgres = PostgreSQL
+engine x = nginx
+
+[acronyms]
+# Acronyms are always written in capitals, and spelled-out forms such as
+# "h i p a a" or "H.I.P.A.A." are joined up into HIPAA.
+API, CPU, GPU, NASA
+hip ah, hippa = HIPAA
+sequel = SQL
+skuzzy = SCSI

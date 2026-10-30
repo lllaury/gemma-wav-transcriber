@@ -10,7 +10,9 @@ from pathlib import Path
 
 from . import __version__
 from .audio import TARGET_RATE, AudioError, Chunk, load_for_model, split_chunks, to_wav_bytes
-from .ollama_client import DEFAULT_HOST, DEFAULT_PROMPT, OllamaClient, OllamaError
+from .ollama_client import DEFAULT_HOST, OllamaClient, OllamaError
+from .prompt import DEFAULT_PROMPT, build_prompt, language_name
+from .vocab import Vocabulary, VocabError, load as load_vocab
 
 DEFAULT_MODEL = "gemma4:e2b"
 FORMATS = ("txt", "srt", "json")
@@ -70,7 +72,7 @@ def output_path(wav: Path, out_dir: Path | None, fmt: str) -> Path:
 
 
 def transcribe_file(
-    client: OllamaClient, wav: Path, args: argparse.Namespace
+    client: OllamaClient, wav: Path, args: argparse.Namespace, prompt: str, vocab: Vocabulary
 ) -> list[tuple[Chunk, str]]:
     samples = load_for_model(wav)
     chunks = split_chunks(samples, TARGET_RATE, chunk_seconds=args.chunk_seconds)
@@ -83,7 +85,7 @@ def transcribe_file(
         for attempt in range(1, args.retries + 2):
             try:
                 text = client.transcribe_wav(
-                    args.model, to_wav_bytes(chunk.samples), prompt=args.prompt, num_ctx=args.num_ctx
+                    args.model, to_wav_bytes(chunk.samples), prompt=prompt, num_ctx=args.num_ctx
                 )
                 break
             except OllamaError as e:
@@ -95,6 +97,8 @@ def transcribe_file(
             f"    chunk {chunk.index + 1}/{len(chunks)} "
             f"[{_ts(chunk.start)[:8]}-{_ts(chunk.end)[:8]}] {time.monotonic() - t0:.1f}s"
         )
+        if vocab and not args.no_correct:
+            text = vocab.correct(text)
         results.append((chunk, text))
     return results
 
@@ -113,7 +117,16 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--chunk-seconds", type=float, default=20.0, help="target chunk length in seconds (default: 20)")
     p.add_argument("--host", default=DEFAULT_HOST, help=f"Ollama server URL (default: {DEFAULT_HOST})")
     p.add_argument("--num-ctx", type=int, default=8192, help="model context size (default: 8192)")
+    p.add_argument("-l", "--language", help="language spoken in the audio, e.g. en, es, French (default: auto-detect)")
+    p.add_argument("--translate-to", metavar="LANG", help="translate the speech into this language instead of transcribing it")
+    p.add_argument("-v", "--vocab", action="append", type=Path, default=[], metavar="FILE",
+                   help="custom vocabulary file of terms, pronunciations and acronyms (can be repeated)")
+    p.add_argument("--no-correct", action="store_true",
+                   help="only give the vocabulary to the model; do not post-correct the transcript")
+    p.add_argument("--no-acronym-rule", action="store_true",
+                   help="do not tell the model to write acronyms in capitals")
     p.add_argument("--prompt", default=DEFAULT_PROMPT, help="override the transcription instruction")
+    p.add_argument("--show-prompt", action="store_true", help="print the full instruction sent to the model")
     p.add_argument("--retries", type=int, default=2, help="retries per chunk on server errors (default: 2)")
     p.add_argument("--overwrite", action="store_true", help="re-transcribe files that already have a transcript")
     p.add_argument("--no-pull", action="store_true", help="do not download the model if it is missing")
@@ -126,6 +139,27 @@ def main(argv: list[str] | None = None) -> int:
     if not 1.0 <= args.chunk_seconds <= 30.0:
         print("error: --chunk-seconds must be between 1 and 30 (Gemma handles about 30s per clip)", file=sys.stderr)
         return 2
+
+    vocab = Vocabulary()
+    try:
+        for path in args.vocab:
+            vocab.merge(load_vocab(path.expanduser()))
+    except VocabError as e:
+        print(f"error: {e}", file=sys.stderr)
+        return 2
+    prompt = build_prompt(
+        args.prompt, args.language, args.translate_to, vocab, acronyms=not args.no_acronym_rule
+    )
+    if vocab:
+        print(
+            f"Vocabulary: {len(vocab.terms)} term(s), {len(vocab.acronyms)} acronym(s), "
+            f"{len(vocab.sounds_like)} pronunciation(s)"
+        )
+    if args.language or args.translate_to:
+        heard = language_name(args.language) or "auto-detect"
+        print(f"Language: {heard}" + (f", translating to {language_name(args.translate_to)}" if args.translate_to else ""))
+    if args.show_prompt:
+        print(f"Prompt: {prompt}")
 
     wavs = find_wavs(args.inputs, args.recursive)
     if not wavs:
@@ -162,7 +196,7 @@ def main(argv: list[str] | None = None) -> int:
             continue
         print(f"[{n}/{len(wavs)}] {wav}")
         try:
-            segments = transcribe_file(client, wav, args)
+            segments = transcribe_file(client, wav, args, prompt, vocab)
         except (AudioError, OllamaError, OSError) as e:
             print(f"  failed: {e}", file=sys.stderr)
             failed += 1
