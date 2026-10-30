@@ -19,7 +19,7 @@ Point it at a folder of recordings of any length and it writes a transcript next
    ollama pull gemma4:e2b
    ```
 
-   Only the Gemma 4 **E2B** and **E4B** models understand audio. `gemma4:e2b` is the default because it is fast enough to run on a CPU (for example inside a virtual machine); use `--model gemma4:e4b` for somewhat better accuracy if you have a GPU or plenty of time.
+   Only the Gemma 4 **E2B** and **E4B** models understand audio. `gemma4:e2b` is the default because it is fast enough to run on a CPU; use `--model gemma4:e4b` for somewhat better accuracy if you have a GPU or plenty of time.
 3. **Python 3.15** (3.12 or newer also works) – only needed if you run from source rather than a prebuilt executable.
 
 ## Install
