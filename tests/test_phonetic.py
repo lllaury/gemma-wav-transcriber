@@ -12,6 +12,7 @@ from gemma_wav_transcriber.phonetic import to_letters
         ("golf-hotel-india", "GHI"),
         ("the kilo eight sierra cluster", "the K8S cluster"),
         ("Juliett whisky niner zulu", "JW9Z"),
+        ("alpha beta charlie", "ABC"),
         # left alone: single code words, plain numbers, digits at the edges
         ("Delta flight to Lima", "Delta flight to Lima"),
         ("one two three", "one two three"),

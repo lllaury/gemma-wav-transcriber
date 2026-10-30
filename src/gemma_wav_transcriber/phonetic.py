@@ -1,11 +1,14 @@
-"""Turns NATO phonetic spelling ("alpha bravo charlie") into letters ("ABC")."""
+"""Turns NATO phonetic spelling ("alpha bravo charlie") into letters ("ABC").
+
+"Beta" is accepted for B as well, since people often say "alpha beta charlie".
+"""
 
 from __future__ import annotations
 
 import re
 
 LETTERS = {
-    "alpha": "A", "alfa": "A", "bravo": "B", "charlie": "C", "delta": "D", "echo": "E",
+    "alpha": "A", "alfa": "A", "bravo": "B", "beta": "B", "charlie": "C", "delta": "D", "echo": "E",
     "foxtrot": "F", "golf": "G", "hotel": "H", "india": "I", "juliet": "J", "juliett": "J",
     "kilo": "K", "lima": "L", "mike": "M", "november": "N", "oscar": "O", "papa": "P",
     "quebec": "Q", "romeo": "R", "sierra": "S", "tango": "T", "uniform": "U", "victor": "V",

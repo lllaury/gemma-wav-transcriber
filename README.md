@@ -128,12 +128,14 @@ Keep "sounds like" phrases specific: a phrase that is also ordinary speech will 
 
 Letters spelled with the NATO phonetic alphabet are turned into the letters themselves, so "Alpha Bravo Charlie"
 becomes `ABC` and "golf-hotel-india" becomes `GHI`. Number words between code words are kept as digits ("kilo eight
-sierra" becomes `K8S`), and both `Alfa`/`Alpha`, `Juliet`/`Juliett`, `Whiskey`/`Whisky` and `X-ray`/`Xray` are
-recognised. The model is told to do this too, and the transcript is corrected afterwards in case it doesn't.
+sierra" becomes `K8S`), and both `Alfa`/`Alpha`, `Juliet`/`Juliett`, `Whiskey`/`Whisky`, `X-ray`/`Xray` and `Beta` for B
+are recognised. The conversion is done on the transcript after the model has written it.
 
 Only runs of two or more code words are converted, so a single "delta" or "Charlie" in normal speech is left alone, and
 number words on their own ("one two three") are never touched. Two code words in a row in ordinary speech, such as a
-name like "Mike Oscar", will also be converted; use `--no-phonetic` if your recordings have that kind of thing. Listed
+name like "Mike Oscar" or "alpha beta testing", will also be converted. If the model leaves out the full stop after a
+spelled code, a code word starting the next sentence can be joined on ("...Alpha Alpha Charlie flew" gives `HIPAAC`),
+so check spelled codes in important transcripts. Use `--no-phonetic` to turn this off. Listed
 acronyms in your vocabulary file are still fixed after the conversion.
 
 ## Languages

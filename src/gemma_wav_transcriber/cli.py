@@ -153,8 +153,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: {e}", file=sys.stderr)
         return 2
     prompt = build_prompt(
-        args.prompt, args.language, args.translate_to, vocab,
-        acronyms=not args.no_acronym_rule, phonetic=not args.no_phonetic,
+        args.prompt, args.language, args.translate_to, vocab, acronyms=not args.no_acronym_rule
     )
     if vocab:
         print(

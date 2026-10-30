@@ -86,7 +86,6 @@ def test_bad_vocab_file(tmp_path, capsys):
 def test_phonetic_spelling(tmp_path, monkeypatch):
     class Client(FakeClient):
         def transcribe_wav(self, model, wav_bytes, prompt, num_ctx):
-            assert "NATO phonetic alphabet" in prompt
             return "our code is hotel india papa alpha alpha"
 
     monkeypatch.setattr(cli, "OllamaClient", Client)
