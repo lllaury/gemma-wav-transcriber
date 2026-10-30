@@ -7,3 +7,5 @@ build/
 dist/
 *.spec
 .pytest_cache/
+test-audio/
+test-out/
