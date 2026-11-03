@@ -159,6 +159,11 @@ Ollama does not yet have a dedicated audio field in its API, so audio is passed 
 current Ollama versions route to the Gemma 4 audio encoder. If your Ollama version replies with something like
 "I can only see an image", update Ollama to the latest release.
 
+## Choosing a backend
+
+See [docs/strategy-comparison.md](docs/strategy-comparison.md) for a comparison of Ollama + Gemma, Hugging Face + Gemma,
+Whisper and Windows System.Speech.
+
 ## Development
 
 ```sh
