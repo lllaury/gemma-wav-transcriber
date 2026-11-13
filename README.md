@@ -164,6 +164,9 @@ If a file yields no text at all, no transcript is written and the file is counte
 peaks somewhere around -20 to -3 dBFS), and "the model returned no text" usually means the model is not one of the
 audio-capable Gemma 4 models or Ollama is out of date.
 
+Gemma 4 E4B "thinks" before answering by default, which can leave its answer empty, so the tool asks Ollama to turn
+thinking off.
+
 ## Development
 
 ```sh
