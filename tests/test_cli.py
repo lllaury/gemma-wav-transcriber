@@ -94,3 +94,28 @@ def test_phonetic_spelling(tmp_path, monkeypatch):
     write_pcm16(tmp_path / "a.wav", tone(3.0, 16000), 16000)
     assert cli.main([str(tmp_path / "a.wav"), "-v", str(vocab)]) == 0
     assert (tmp_path / "a.txt").read_text().strip() == "our code is HIPAA"
+
+
+def test_empty_model_reply_is_a_failure(tmp_path, monkeypatch, capsys):
+    class Client(FakeClient):
+        empty_reason = "the model only produced hidden reasoning, no answer"
+
+        def transcribe_wav(self, model, wav_bytes, prompt, num_ctx):
+            return ""
+
+    monkeypatch.setattr(cli, "OllamaClient", Client)
+    write_pcm16(tmp_path / "a.wav", tone(3.0, 16000), 16000)
+    assert cli.main([str(tmp_path / "a.wav")]) == 1
+    assert not (tmp_path / "a.txt").exists()
+    err = capsys.readouterr().err
+    assert "hidden reasoning" in err and "returned no text" in err
+
+
+def test_silent_file_is_a_failure(tmp_path, monkeypatch, capsys):
+    import numpy as np
+
+    monkeypatch.setattr(cli, "OllamaClient", FakeClient)
+    write_pcm16(tmp_path / "quiet.wav", np.zeros(16000 * 3, dtype=np.float32), 16000)
+    assert cli.main([str(tmp_path / "quiet.wav")]) == 1
+    assert not (tmp_path / "quiet.txt").exists()
+    assert "no speech found" in capsys.readouterr().err

@@ -21,6 +21,12 @@ class OllamaClient:
     def __init__(self, host: str = DEFAULT_HOST, timeout: float = 600.0) -> None:
         self.host = host.rstrip("/")
         self.timeout = timeout
+        # Why the last transcribe_wav call came back empty, if it did.
+        self.empty_reason = ""
+        # Gemma 4 E4B thinks by default, which can leave the answer empty.
+        # Older Ollama versions reject the "think" field, so it is dropped
+        # for good the first time the server complains about it.
+        self.send_think = True
 
     def _request(self, method: str, path: str, payload: dict | None = None):
         data = json.dumps(payload).encode() if payload is not None else None
@@ -90,8 +96,36 @@ class OllamaClient:
             ],
             "options": {"temperature": temperature, "num_ctx": num_ctx},
         }
-        with self._request("POST", "/api/chat", payload) as resp:
-            body = json.load(resp)
+        if self.send_think:
+            payload["think"] = False
+        try:
+            body = self._chat(payload)
+        except OllamaError as e:
+            if not self.send_think or "think" not in str(e).lower():
+                raise
+            self.send_think = False
+            payload.pop("think")
+            body = self._chat(payload)
         if "error" in body:
             raise OllamaError(body["error"])
-        return body.get("message", {}).get("content", "").strip()
+        message = body.get("message") or {}
+        text = (message.get("content") or "").strip()
+        self.empty_reason = "" if text else _explain_empty(body)
+        return text
+
+    def _chat(self, payload: dict) -> dict:
+        with self._request("POST", "/api/chat", payload) as resp:
+            return json.load(resp)
+
+
+def _explain_empty(body: dict) -> str:
+    """Describe an empty chat reply so the user knows where to look."""
+    message = body.get("message") or {}
+    parts = []
+    if body.get("done_reason") and body["done_reason"] != "stop":
+        parts.append(f"stopped early ({body['done_reason']}); try a larger --num-ctx")
+    if (message.get("thinking") or "").strip():
+        parts.append("the model only produced hidden reasoning, no answer")
+    if body.get("prompt_eval_count") is not None:
+        parts.append(f"{body['prompt_eval_count']} input tokens, {body.get('eval_count', 0)} output tokens")
+    return "; ".join(parts)

@@ -9,7 +9,15 @@ import time
 from pathlib import Path
 
 from . import __version__
-from .audio import TARGET_RATE, AudioError, Chunk, load_for_model, split_chunks, to_wav_bytes
+from .audio import (
+    TARGET_RATE,
+    AudioError,
+    Chunk,
+    level_dbfs,
+    load_for_model,
+    split_chunks,
+    to_wav_bytes,
+)
 from .ollama_client import DEFAULT_HOST, OllamaClient, OllamaError
 from .phonetic import to_letters
 from .prompt import DEFAULT_PROMPT, build_prompt, language_name
@@ -17,6 +25,10 @@ from .vocab import Vocabulary, VocabError, load as load_vocab
 
 DEFAULT_MODEL = "gemma4:e2b"
 FORMATS = ("txt", "srt", "json")
+
+
+class EmptyTranscript(Exception):
+    """Raised when a file produced no text at all, so no transcript is written."""
 
 
 def find_wavs(inputs: list[str], recursive: bool) -> list[Path]:
@@ -78,7 +90,13 @@ def transcribe_file(
     samples = load_for_model(wav)
     chunks = split_chunks(samples, TARGET_RATE, chunk_seconds=args.chunk_seconds)
     duration = samples.size / TARGET_RATE
-    print(f"  {duration:.1f}s of audio, {len(chunks)} chunk(s)")
+    peak, rms = level_dbfs(samples)
+    print(f"  {duration:.1f}s of audio, {len(chunks)} chunk(s), peak {peak:.0f} dBFS, average {rms:.0f} dBFS")
+    if not chunks:
+        raise EmptyTranscript(
+            "no speech found: the audio is too short or too quiet "
+            f"(peak {peak:.0f} dBFS). Check the recording level or the right microphone was used."
+        )
     results = []
     for chunk in chunks:
         t0 = time.monotonic()
@@ -98,11 +116,24 @@ def transcribe_file(
             f"    chunk {chunk.index + 1}/{len(chunks)} "
             f"[{_ts(chunk.start)[:8]}-{_ts(chunk.end)[:8]}] {time.monotonic() - t0:.1f}s"
         )
+        if not text:
+            reason = getattr(client, "empty_reason", "")
+            print(
+                f"    warning: chunk {chunk.index + 1}: the model returned no text"
+                + (f" ({reason})" if reason else ""),
+                file=sys.stderr,
+            )
         if not args.no_phonetic:
             text = to_letters(text, vocab.acronyms)
         if vocab and not args.no_correct:
             text = vocab.correct(text)
         results.append((chunk, text))
+    if not any(t for _, t in results):
+        raise EmptyTranscript(
+            f"the model returned no text for any of the {len(chunks)} chunk(s). "
+            f"Check that {args.model} is an audio-capable model (gemma4:e2b or gemma4:e4b) "
+            "and that Ollama is up to date (`ollama --version`)."
+        )
     return results
 
 
@@ -202,7 +233,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"[{n}/{len(wavs)}] {wav}")
         try:
             segments = transcribe_file(client, wav, args, prompt, vocab)
-        except (AudioError, OllamaError, OSError) as e:
+        except (AudioError, OllamaError, OSError, EmptyTranscript) as e:
             print(f"  failed: {e}", file=sys.stderr)
             failed += 1
             continue

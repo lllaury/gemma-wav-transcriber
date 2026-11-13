@@ -159,6 +159,14 @@ Ollama does not yet have a dedicated audio field in its API, so audio is passed 
 current Ollama versions route to the Gemma 4 audio encoder. If your Ollama version replies with something like
 "I can only see an image", update Ollama to the latest release.
 
+If a file yields no text at all, no transcript is written and the file is counted as failed, with the reason:
+"no speech found" means the recording is silent or very quiet (the peak level is shown in dBFS; normal speech
+peaks somewhere around -20 to -3 dBFS), and "the model returned no text" usually means the model is not one of the
+audio-capable Gemma 4 models or Ollama is out of date.
+
+Gemma 4 E4B "thinks" before answering by default, which can leave its answer empty, so the tool asks Ollama to turn
+thinking off.
+
 ## Development
 
 ```sh
