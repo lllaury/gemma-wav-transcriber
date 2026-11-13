@@ -170,6 +170,16 @@ def split_chunks(
     return chunks
 
 
+def level_dbfs(samples: np.ndarray) -> tuple[float, float]:
+    """Return (peak, rms) loudness of the audio in dBFS (0 = full scale)."""
+    if samples.size == 0:
+        return float("-inf"), float("-inf")
+    peak = float(np.max(np.abs(samples)))
+    rms = float(np.sqrt(np.mean(samples.astype(np.float64) ** 2)))
+    to_db = lambda v: 20 * np.log10(v) if v > 0 else float("-inf")  # noqa: E731
+    return to_db(peak), to_db(rms)
+
+
 def to_wav_bytes(samples: np.ndarray, rate: int = TARGET_RATE) -> bytes:
     """Encode mono float samples as a 16-bit PCM WAV file in memory."""
     ints = (np.clip(samples, -1.0, 1.0) * 32767.0).astype("<i2")
